@@ -106,11 +106,17 @@ const organizer = {
                     // Not all tabs are part of the same group. Make it so!
                     
                     const tabIds = groupTabs.map((tab) => tab.id);
+                    console.log("GROUP TABS", { groupKey });
                     const tabGroupId = await chrome.tabs.group({ tabIds });
-                    console.log("MAKE TAB GROUP, id:", tabGroupId, "key:", groupKey);
                     await chrome.tabGroups.update(tabGroupId, { title: groupKey, color: "grey" });
                     //await chrome.tabGroups.update(tabGroup, { title: group[0], color: "grey" });
                 }
+            }
+            else if (groupIds.length > 1 || !groupIds.has(-1)) {
+                // This logical group has too few tabs to be an actual tab group.
+                console.log("UNGROUP TABS", { groupKey });
+                const tabIds = groupTabs.map((tab) => tab.id);
+                await chrome.tabs.ungroup(tabIds);
             }
         }
     },
@@ -156,8 +162,10 @@ chrome.tabs.onMoved.addListener((tabId, moveInfo) => {
     console.log("tabs.onMoved(", tabId, moveInfo, ")");
 });
 
-chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
     console.log("tabs.onRemoved(", tabId, removeInfo, ")");
+    const tabs = await organizer.getAllTabs();
+    await organizer.groupAllTabs(tabs);
 });
 
 chrome.tabs.onReplaced.addListener((addedTabId, removedTabId) => {
