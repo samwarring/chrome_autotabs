@@ -9,5 +9,8 @@
     "host_permissions": [
         "http://*/*",
         "https://*/*"
+    ],
+    "permissions": [
+        "tabGroups"
     ]
 }
