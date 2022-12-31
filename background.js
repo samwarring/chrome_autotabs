@@ -2,12 +2,13 @@ const organizer = {
     groupThreshold: 4,
     collator: new Intl.Collator(),
 
-    getAllTabs: async function() {
+    getAllTabs: async function(windowId) {
         return chrome.tabs.query({
             url: [
                 "http://*/*",
                 "https://*/*"
-            ]
+            ],
+            windowId
         });
     },
 
@@ -41,8 +42,8 @@ const organizer = {
         }
     },
 
-    sortAllTabs: async function() {
-        const tabs = await this.getAllTabs();
+    sortAllTabs: async function(windowId) {
+        const tabs = await this.getAllTabs(windowId);
         const keyedTabs = [];
         for (const tab of tabs) {
             const keyedTab = {
@@ -97,9 +98,9 @@ const organizer = {
         }
     },
 
-    getLogicalGroups: async function() {
+    getLogicalGroups: async function(windowId) {
         // Get info about existing groups.
-        const tabs = await this.getAllTabs();
+        const tabs = await this.getAllTabs(windowId);
         const groupInfos = new Map();
         for (const tab of tabs) {
             const groupKey = this.getGroupKey(tab);
@@ -120,8 +121,8 @@ const organizer = {
         return groupInfos;
     },
 
-    groupAllTabs: async function() {        
-        const groupInfos = await this.getLogicalGroups();
+    groupAllTabs: async function(windowId) {        
+        const groupInfos = await this.getLogicalGroups(windowId);
         console.log("LOGICAL GROUPS:", groupInfos);
 
         // Look at each logical group.
@@ -223,9 +224,11 @@ chrome.tabs.onMoved.addListener((tabId, moveInfo) => {
 });
 
 chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
-    console.log("tabs.onRemoved(", tabId, removeInfo, ")");
-    await organizer.groupAllTabs();
-    tabUrlCache.removeTab(tabId);
+    if (!removeInfo.isWindowClosing) {
+        console.log("tabs.onRemoved(", tabId, removeInfo, ")");
+        await organizer.groupAllTabs(removeInfo.windowId);
+        tabUrlCache.removeTab(tabId);
+    }
 });
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
@@ -233,7 +236,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
         console.log("tabs.onUpdated(", tabId, changeInfo, tab, ")");
         await tabUrlCache.initialze();
         
-        await organizer.sortAllTabs();
-        await organizer.groupAllTabs();
+        await organizer.sortAllTabs(tab.windowId);
+        await organizer.groupAllTabs(tab.windowId);
     }
 });
