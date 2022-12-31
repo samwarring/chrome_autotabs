@@ -187,9 +187,12 @@ const organizer = {
             }
             else {
                 // This logical group has too few tabs to be an actual tab group.
-                console.log("UNGROUP TABS", { groupKey });
-                const tabIds = groupTabs.map((tab) => tab.id);
-                await chrome.tabs.ungroup(tabIds);
+                if (groupIds.size > 1 || this.getSetValue(groupIds) != -1) {
+                    // At least one of the tabs belongs to a group. Ungroup them all.
+                    console.log("UNGROUP TABS", { groupKey });
+                    const tabIds = groupTabs.map((tab) => tab.id);
+                    await chrome.tabs.ungroup(tabIds);
+                }
             }
         }
     },
