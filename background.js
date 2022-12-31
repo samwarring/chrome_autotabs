@@ -55,8 +55,18 @@ const organizer = {
         keyedTabs.sort((a, b) => this.compareSortKeys(a.key, b.key));
         console.log("SORTED TABS:", keyedTabs.map((keyedTab) => keyedTab.tab.url));
 
-        for (let index = 0; index < keyedTabs.length; index++) {
-            await chrome.tabs.move(keyedTabs[index].tab.id, { index });
+        // Compute how far each tab needs to move
+        for (let newIndex = 0; newIndex < keyedTabs.length; newIndex++) {
+            keyedTabs[newIndex].newIndex = newIndex;
+            keyedTabs[newIndex].distance = Math.abs(keyedTabs[newIndex].tab.index - newIndex);
+        }
+
+        // Sort the tabs again, this time by how far they need to move.
+        keyedTabs.sort((a, b) => b.distance - a.distance);
+
+        // Move the tabs
+        for (const keyedTab of keyedTabs) {
+            await chrome.tabs.move(keyedTab.tab.id, { index: keyedTab.newIndex });
         }
     },
 
