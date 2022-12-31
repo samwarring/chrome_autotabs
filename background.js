@@ -198,6 +198,37 @@ const organizer = {
     },
 };
 
+const tabUrlCache = {
+    urls: new Map(),
+    isInitialized: false,
+
+    initialze: async function() {
+        if (!this.isInitialized) {
+            const tabs = await organizer.getAllTabs();
+            for (const tab of tabs) {
+                this.urls.set(tab.id, new URL(tab.url));
+            }
+            this.isInitialized = true;
+        }
+    },
+
+    removeTab: function(tabId) {
+        this.urls.delete(tabId);
+    },
+
+    isTabKeyChanged: function(tab) {
+        const newUrl = new URL(tab.url);
+        if (this.urls.has(tab.id)) {
+            const oldUrl = this.urls.get(tab.id);
+            if (oldUrl.host == newUrl.host && oldUrl.pathname == newUrl.pathname) {
+                return false;
+            }
+        }
+        this.urls.set(tab.id, newUrl);
+        return true;
+    }
+};
+
 chrome.tabs.onMoved.addListener((tabId, moveInfo) => {
     console.log("tabs.onMoved(", tabId, moveInfo, ")");
 });
@@ -206,13 +237,14 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
     console.log("tabs.onRemoved(", tabId, removeInfo, ")");
     const collapsedGroupTitles = await organizer.getCollapsedGroupTitles();
     await organizer.groupAllTabs(collapsedGroupTitles);
+    tabUrlCache.removeTab(tabId);
 });
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    if ('url' in changeInfo || 'groupId' in changeInfo) {
+    if ('url' in changeInfo && tabUrlCache.isTabKeyChanged(tab)) {
         console.log("tabs.onUpdated(", tabId, changeInfo, tab, ")");
-    }
-    if ('url' in changeInfo) {
+        await tabUrlCache.initialze();
+
         // Information about the current groups, before we go and move everything around.
         const collapsedGroupTitles = await organizer.getCollapsedGroupTitles();
         
