@@ -41,7 +41,8 @@ const organizer = {
         }
     },
 
-    sortAllTabs: async function(tabs) {
+    sortAllTabs: async function() {
+        const tabs = await this.getAllTabs();
         const keyedTabs = [];
         for (const tab of tabs) {
             const keyedTab = {
@@ -54,9 +55,9 @@ const organizer = {
         keyedTabs.sort((a, b) => this.compareSortKeys(a.key, b.key));
         console.log("SORTED TABS:", keyedTabs.map((keyedTab) => keyedTab.tab.url));
 
-        keyedTabs.forEach(async (keyedTab, index, _) => {
-            await chrome.tabs.move(keyedTab.tab.id, { index });
-        })
+        for (let index = 0; index < keyedTabs.length; index++) {
+            await chrome.tabs.move(keyedTabs[index].tab.id, { index });
+        }
     },
 
     getGroupKey: function(tab) {
@@ -70,12 +71,11 @@ const organizer = {
         }
     },
 
-    groupAllTabs: async function(tabs) {        
+    getLogicalGroups: async function() {
         // Get info about existing groups.
-        //console.log("GROUP IDS:");
+        const tabs = await this.getAllTabs();
         const groupInfos = new Map();
         for (const tab of tabs) {
-            //console.log(tab.url, "=>", tab.groupId);
             const groupKey = this.getGroupKey(tab);
             if (groupInfos.has(groupKey)) {
                 const info = groupInfos.get(groupKey);
@@ -91,7 +91,22 @@ const organizer = {
                 });
             }
         }
+        return groupInfos;
+    },
 
+    getCollapsedGroupTitles: async function() {
+        const tabGroups = await chrome.tabGroups.query({});
+        const collapsedGroupTitles = new Set();
+        for (const tabGroup of tabGroups) {
+            if (tabGroup.collapsed) {
+                collapsedGroupTitles.add(tabGroup.title);
+            }
+        }
+        return collapsedGroupTitles;
+    },
+
+    groupAllTabs: async function(collapsedGroupTitles) {        
+        const groupInfos = await this.getLogicalGroups();
         console.log("LOGICAL GROUPS:", groupInfos);
 
         // Look at each logical group.
@@ -100,19 +115,17 @@ const organizer = {
             const groupIds = groupInfo[1].groupIds;
             const groupTabs = groupInfo[1].tabs;
             if (groupTabs.length >= this.groupThreshold) {
-                // This logical group has enough tabs to be an actual tab group.
-                
-                if (groupIds.has(-1) || groupIds.size > 1) {
-                    // Not all tabs are part of the same group. Make it so!
-                    
-                    const tabIds = groupTabs.map((tab) => tab.id);
-                    console.log("GROUP TABS", { groupKey });
-                    const tabGroupId = await chrome.tabs.group({ tabIds });
-                    await chrome.tabGroups.update(tabGroupId, { title: groupKey, color: "grey" });
-                    //await chrome.tabGroups.update(tabGroup, { title: group[0], color: "grey" });
-                }
+                // This logical group has enough tabs to be an actual tab group. Make a new group!
+                const tabIds = groupTabs.map((tab) => tab.id);
+                console.log("GROUP TABS", { groupKey });
+                const tabGroupId = await chrome.tabs.group({ tabIds });
+
+                // If the logical group previously existed, preserve its "collapsed" state.
+                const collapsed = collapsedGroupTitles.has(groupKey);                
+
+                await chrome.tabGroups.update(tabGroupId, { title: groupKey, color: "grey", collapsed });
             }
-            else if (groupIds.length > 1 || !groupIds.has(-1)) {
+            else {//if (groupIds.length > 1 || !groupIds.has(-1)) {
                 // This logical group has too few tabs to be an actual tab group.
                 console.log("UNGROUP TABS", { groupKey });
                 const tabIds = groupTabs.map((tab) => tab.id);
@@ -129,7 +142,7 @@ const organizer = {
 // });
 
 chrome.tabs.onActivated.addListener((activeInfo) => {
-    console.log("tabs.onActivated(", activeInfo, ")");
+    //console.log("tabs.onActivated(", activeInfo, ")");
 });
 
 // Deprecated: Use onActivated
@@ -138,15 +151,15 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 // });
 
 chrome.tabs.onAttached.addListener((tabId, attachInfo) => {
-    console.log("tabs.onAttached(", tabId, attachInfo, ")");
+    //console.log("tabs.onAttached(", tabId, attachInfo, ")");
 });
 
 chrome.tabs.onCreated.addListener((tab) => {
-    console.log("tabs.onCreated(", tab, ")");
+    //console.log("tabs.onCreated(", tab, ")");
 });
 
 chrome.tabs.onDetached.addListener((tabId, detachInfo) => {
-    console.log("tabs.onDetached(", tabId, detachInfo, ")");
+    //console.log("tabs.onDetached(", tabId, detachInfo, ")");
 });
 
 // Deprecated: Use onHighlighted
@@ -155,7 +168,7 @@ chrome.tabs.onDetached.addListener((tabId, detachInfo) => {
 // });
 
 chrome.tabs.onHighlighted.addListener((highlightInfo) => {
-    console.log("tabs.onHighlighted(", highlightInfo, ")");
+    //console.log("tabs.onHighlighted(", highlightInfo, ")");
 });
 
 chrome.tabs.onMoved.addListener((tabId, moveInfo) => {
@@ -164,12 +177,12 @@ chrome.tabs.onMoved.addListener((tabId, moveInfo) => {
 
 chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
     console.log("tabs.onRemoved(", tabId, removeInfo, ")");
-    const tabs = await organizer.getAllTabs();
-    await organizer.groupAllTabs(tabs);
+    const collapsedGroupTitles = await organizer.getCollapsedGroupTitles();
+    await organizer.groupAllTabs(collapsedGroupTitles);
 });
 
 chrome.tabs.onReplaced.addListener((addedTabId, removedTabId) => {
-    console.log("tabs.onReplaced(", addedTabId, removedTabId, ")");
+    //console.log("tabs.onReplaced(", addedTabId, removedTabId, ")");
 });
 
 // Deprecated:Use onActivated
@@ -178,14 +191,18 @@ chrome.tabs.onReplaced.addListener((addedTabId, removedTabId) => {
 // });
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    console.log("tabs.onUpdated(", tabId, changeInfo, tab, ")");
+    if ('url' in changeInfo || 'groupId' in changeInfo) {
+        console.log("tabs.onUpdated(", tabId, changeInfo, tab, ")");
+    }
     if ('url' in changeInfo) {
-        const tabs = await organizer.getAllTabs();
-        await organizer.sortAllTabs(tabs);
-        await organizer.groupAllTabs(tabs);
+        // Information about the current groups, before we go and move everything around.
+        const collapsedGroupTitles = await organizer.getCollapsedGroupTitles();
+        
+        await organizer.sortAllTabs();
+        await organizer.groupAllTabs(collapsedGroupTitles);
     }
 });
 
 chrome.tabs.onZoomChange.addListener((zoomChangeInfo) => {
-    console.log("tabs.onZoomChange(", zoomChangeInfo, ")");
+    //console.log("tabs.onZoomChange(", zoomChangeInfo, ")");
 });
