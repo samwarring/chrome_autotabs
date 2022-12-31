@@ -163,7 +163,7 @@ const organizer = {
                     console.log("NEW TAB GROUP", { groupKey });
                     const tabIds = groupTabs.map((tab) => tab.id);
                     const tabGroupId = await chrome.tabs.group({ tabIds });
-                    await chrome.tabGroups.update(tabGroupId, { title: groupKey, color: "grey" });
+                    await chrome.tabGroups.update(tabGroupId, { title: groupKey });
                 }
                 else if (moveToGroupId != -1) {
                     // At least one tab was in the right group. Add the missing tabs to it.
