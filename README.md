@@ -1,2 +1,2 @@
 # chrome_autotabs
-Chrome extension that automatically sort and group your tabs by URL
+Chrome extension that automatically sorts and groups your tabs by URL
