@@ -117,10 +117,6 @@ const organizer = {
                 });
             }
         }
-        // for (const groupInfo of groupInfos) {
-        //     // Convert Set to an array.
-        //     groupInfo[1].groupIds = Array.from(groupInfo[1].groupIds);
-        // }
         return groupInfos;
     },
 
