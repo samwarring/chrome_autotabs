@@ -70,6 +70,22 @@ const organizer = {
         }
     },
 
+    getSetValue: function(set) {
+        for (const value of set) {
+            return value;
+        }
+        return null;
+    },
+
+    getPositiveSetValue: function(set) {
+        for (const value of set) {
+            if (value > 0) {
+                return value;
+            }
+        }
+        return null;
+    },
+
     getGroupKey: function(tab) {
         const url = new URL(tab.url);
         const parts = url.host.split('.');
@@ -101,6 +117,10 @@ const organizer = {
                 });
             }
         }
+        // for (const groupInfo of groupInfos) {
+        //     // Convert Set to an array.
+        //     groupInfo[1].groupIds = Array.from(groupInfo[1].groupIds);
+        // }
         return groupInfos;
     },
 
@@ -125,17 +145,51 @@ const organizer = {
             const groupIds = groupInfo[1].groupIds;
             const groupTabs = groupInfo[1].tabs;
             if (groupTabs.length >= this.groupThreshold) {
-                // This logical group has enough tabs to be an actual tab group. Make a new group!
-                const tabIds = groupTabs.map((tab) => tab.id);
-                console.log("GROUP TABS", { groupKey });
-                const tabGroupId = await chrome.tabs.group({ tabIds });
+                // This logical group has enough tabs to be an actual tab group.
+                let makeNewGroup = true;
+                let moveToGroupId = -1;
+                if (groupIds.size == 1 && !groupIds.has(-1)) {
+                    // All tabs in the logical group already share a tab group.
+                    const tabGroupId = this.getSetValue(groupIds);
+                    const tabGroup = await chrome.tabGroups.get(tabGroupId);
+                    if (tabGroup.title == groupKey) {
+                        // And they are in the correct group.
+                        makeNewGroup = false;
+                    }
+                }
+                else if (groupIds.size > 1) {
+                    // Tabs are split up. Maybe some are in the correct group,
+                    // but maybe none are in the correct group.
+                    for (const tabGroupId of groupIds.values()) {
+                        if (tabGroupId != -1) {
+                            const tabGroup = await chrome.tabGroups.get(tabGroupId);
+                            if (tabGroup.title == groupKey) {
+                                // At least one is in the correct group.
+                                makeNewGroup = false;
+                                moveToGroupId = tabGroupId;
+                                break;
+                            }
+                        }
+                    }
+                }
 
-                // If the logical group previously existed, preserve its "collapsed" state.
-                const collapsed = collapsedGroupTitles.has(groupKey);                
-
-                await chrome.tabGroups.update(tabGroupId, { title: groupKey, color: "grey", collapsed });
+                if (makeNewGroup) {
+                    // None of the tabs were in the right group. Make a new one.
+                    console.log("NEW TAB GROUP", { groupKey });
+                    const tabIds = groupTabs.map((tab) => tab.id);
+                    const tabGroupId = await chrome.tabs.group({ tabIds });
+                    await chrome.tabGroups.update(tabGroupId, { title: groupKey, color: "grey" });
+                }
+                else if (moveToGroupId != -1) {
+                    // At least one tab was in the right group. Add the missing tabs to it.
+                    console.log("ADD TO TAB GROUP", { groupKey });
+                    const tabIds = (groupTabs
+                        .filter((tab) => tab.groupId != moveToGroupId)
+                        .map((tab) => tab.id));
+                    await chrome.tabs.group({ tabIds, groupId: moveToGroupId });
+                }
             }
-            else {//if (groupIds.length > 1 || !groupIds.has(-1)) {
+            else {
                 // This logical group has too few tabs to be an actual tab group.
                 console.log("UNGROUP TABS", { groupKey });
                 const tabIds = groupTabs.map((tab) => tab.id);
