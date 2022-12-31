@@ -120,18 +120,7 @@ const organizer = {
         return groupInfos;
     },
 
-    getCollapsedGroupTitles: async function() {
-        const tabGroups = await chrome.tabGroups.query({});
-        const collapsedGroupTitles = new Set();
-        for (const tabGroup of tabGroups) {
-            if (tabGroup.collapsed) {
-                collapsedGroupTitles.add(tabGroup.title);
-            }
-        }
-        return collapsedGroupTitles;
-    },
-
-    groupAllTabs: async function(collapsedGroupTitles) {        
+    groupAllTabs: async function() {        
         const groupInfos = await this.getLogicalGroups();
         console.log("LOGICAL GROUPS:", groupInfos);
 
@@ -235,8 +224,7 @@ chrome.tabs.onMoved.addListener((tabId, moveInfo) => {
 
 chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
     console.log("tabs.onRemoved(", tabId, removeInfo, ")");
-    const collapsedGroupTitles = await organizer.getCollapsedGroupTitles();
-    await organizer.groupAllTabs(collapsedGroupTitles);
+    await organizer.groupAllTabs();
     tabUrlCache.removeTab(tabId);
 });
 
@@ -244,11 +232,8 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     if ('url' in changeInfo && tabUrlCache.isTabKeyChanged(tab)) {
         console.log("tabs.onUpdated(", tabId, changeInfo, tab, ")");
         await tabUrlCache.initialze();
-
-        // Information about the current groups, before we go and move everything around.
-        const collapsedGroupTitles = await organizer.getCollapsedGroupTitles();
         
         await organizer.sortAllTabs();
-        await organizer.groupAllTabs(collapsedGroupTitles);
+        await organizer.groupAllTabs();
     }
 });
