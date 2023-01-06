@@ -63,11 +63,11 @@ header {
     cursor: pointer;
 }
 
-.spinDecrease:active {
+.spinDecrease:hover {
     background-color: tomato;
 }
 
-.spinIncrease:active {
+.spinIncrease:hover {
     background-color: greenyellow;
 }
 
