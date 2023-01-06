@@ -30,8 +30,15 @@ const controller = {
         }
     },
 
+    loadOptions: async function() {
+        const data = await chrome.storage.sync.get("options");
+        Object.assign(options, data.options);
+        console.log("LOAD OPTIONS:", options);
+    },
+
     storeOptions: async function() {
         console.log("STORE OPTIONS:", options);
+        chrome.storage.sync.set({ options });
     }
 };
 
@@ -66,5 +73,6 @@ const ui = {
     }
 };
 
+await controller.loadOptions();
 ui.updateAll();
 ui.addEventListeners();
