@@ -69,7 +69,39 @@
             </p>
         </div>
     </div>
-    <script src="./popup.js" type="module"></script>
+    <div class="option">
+        <h2>Group Colors</h2>
+        <div class="optionDescription">
+            <p class="optionDescriptionDetails">
+                Choose which color is always assigned to a particular group.
+            </p>
+        </div>
+        <div class="optionValue">
+            <input id="newGroupColorAdd" type="button" class="groupColorButton" value="+" />
+            <select id="newGroupColorColor" class="groupColorSelect">
+                <option value="blue">Blue</option>
+                <option value="red">Red</option>
+                <option value="orange">Orange</option>
+                <option value="green">Green</option>
+                <option value="pink">Pink</option>
+                <option value="purple">Purple</option>
+                <option value="teal">Teal</option>
+                <option value="gray">Gray</option>
+            </select>
+            <input id="newGroupColorName" placeholder="e.g. 'google'" />
+        </div>
+        <div class="optionValue">
+            <template id="groupColorTemplate">
+                <li>
+                    <input type="button" value="-" />
+                    <label>groupname</label>
+                </li>
+            </template>
+            <ul id="groupColorList">
+            </ul>
+        </div>
+    </div>
+    <script src=" ./popup.js" type="module"></script>
 </body>
 
 </html>
