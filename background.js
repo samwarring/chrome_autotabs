@@ -1,5 +1,15 @@
-const organizer = {
+const options = {
+    enableSort: true,
+    enableGroups: true,
     groupThreshold: 4,
+};
+
+const loadedOptions = chrome.storage.sync.get().then((items) => {
+    Object.assign(options, items.options);
+    console.log("LOADED OPTIONS:", options);
+});
+
+const organizer = {
     collator: new Intl.Collator(),
 
     getAllTabs: async function(windowId) {
@@ -130,7 +140,7 @@ const organizer = {
             const groupKey = groupInfo[0];
             const groupIds = groupInfo[1].groupIds;
             const groupTabs = groupInfo[1].tabs;
-            if (groupTabs.length >= this.groupThreshold) {
+            if (groupTabs.length >= options.groupThreshold) {
                 // This logical group has enough tabs to be an actual tab group.
                 let makeNewGroup = true;
                 let moveToGroupId = -1;
@@ -186,6 +196,30 @@ const organizer = {
             }
         }
     },
+
+    ungroupAllTabs: async function(windowId) {
+        const tabs = await this.getAllTabs(windowId);
+        const tabIds = tabs.map((tab) => tab.id);
+        await chrome.tabs.ungroup(tabIds);
+    },
+
+    handleOptionsUpdate: async function(oldOptions, newOptions) {
+        Object.assign(options, newOptions);
+        const windows = await chrome.windows.getAll();
+
+        for (const window of windows) {
+            if (!oldOptions.enableSort && newOptions.enableSort) {
+                await this.sortAllTabs(window.id);
+            }
+            if (newOptions.enableGroups && (!oldOptions.enableGroups ||
+                                            (oldOptions.groupThreshold != newOptions.groupThreshold))) {
+                await this.groupAllTabs(window.id);
+            }
+            else if (!newOptions.enableGroups && oldOptions.enableGroups) {
+                await this.ungroupAllTabs(window.id);
+            }
+        }
+    }
 };
 
 const tabUrlCache = {
@@ -226,7 +260,10 @@ chrome.tabs.onMoved.addListener((tabId, moveInfo) => {
 chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
     if (!removeInfo.isWindowClosing) {
         console.log("tabs.onRemoved(", tabId, removeInfo, ")");
-        await organizer.groupAllTabs(removeInfo.windowId);
+        await loadedOptions;
+        if (options.enableGroups) {
+            await organizer.groupAllTabs(removeInfo.windowId);
+        }
         tabUrlCache.removeTab(tabId);
     }
 });
@@ -235,8 +272,19 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     if ('url' in changeInfo && tabUrlCache.isTabKeyChanged(tab)) {
         console.log("tabs.onUpdated(", tabId, changeInfo, tab, ")");
         await tabUrlCache.initialze();
-        
-        await organizer.sortAllTabs(tab.windowId);
-        await organizer.groupAllTabs(tab.windowId);
+        await loadedOptions;
+        if (options.enableSort) {
+            await organizer.sortAllTabs(tab.windowId);
+        }
+        if (options.enableGroups) {
+            await organizer.groupAllTabs(tab.windowId);
+        }
+    }
+});
+
+chrome.storage.onChanged.addListener(async (changes, area) => {
+    if (area == 'sync') {
+        console.log("storage.onChanged(", changes, area, ")");
+        await organizer.handleOptionsUpdate(changes.options.oldValue, changes.options.newValue);
     }
 });
