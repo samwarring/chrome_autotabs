@@ -2,6 +2,7 @@ const options = {
     enableSort: true,
     enableGroups: true,
     groupThreshold: 4,
+    groupColors: [],
 };
 
 const loadedOptions = chrome.storage.sync.get().then((items) => {
@@ -173,7 +174,10 @@ const organizer = {
                     // None of the tabs were in the right group. Make a new one.
                     console.log("NEW TAB GROUP", { groupKey });
                     const tabIds = groupTabs.map((tab) => tab.id);
-                    const tabGroupId = await chrome.tabs.group({ tabIds });
+                    const tabGroupId = await chrome.tabs.group({ 
+                        createProperties: { windowId },
+                        tabIds
+                    });
                     await chrome.tabGroups.update(tabGroupId, { title: groupKey });
                 }
                 else if (moveToGroupId != -1) {
@@ -203,7 +207,9 @@ const organizer = {
         await chrome.tabs.ungroup(tabIds);
     },
 
-    handleOptionsUpdate: async function(oldOptions, newOptions) {
+    handleOptionsUpdate: async function(newOptions) {
+        const oldOptions = {};
+        Object.assign(oldOptions, options);
         Object.assign(options, newOptions);
         const windows = await chrome.windows.getAll();
 
@@ -285,6 +291,6 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 chrome.storage.onChanged.addListener(async (changes, area) => {
     if (area == 'sync') {
         console.log("storage.onChanged(", changes, area, ")");
-        await organizer.handleOptionsUpdate(changes.options.oldValue, changes.options.newValue);
+        await organizer.handleOptionsUpdate(changes.options.newValue);
     }
 });

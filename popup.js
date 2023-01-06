@@ -3,18 +3,15 @@ let options = {
     enableSort: true,
     enableGroups: true,
     groupThreshold: 4,
-    groupColors: new Map([
+    groupColors: [
         ["google", "blue"],
         ["stackoverflow", "orange"],
         ["duckduckgo", "red"],
-    ])
+    ],
 };
 
-const defaultGroupColors = new Map([
-    ["google", "blue"],
-    ["stackoverflow", "orange"],
-    ["duckduckgo", "red"],
-]);
+// Used for string comparisons.
+const collator = new Intl.Collator();
 
 const controller = {
     enableSort: async function(isEnabled) {
@@ -43,15 +40,28 @@ const controller = {
 
     addGroupColor: async function(groupName, color) {
         if (groupName) {
-            options.groupColors.set(groupName, color);
+            let foundEntry = false;
+            for (const entry of options.groupColors) {
+                if (collator.compare(groupName, entry[0]) == 0) {
+                    foundEntry = true;
+                    entry[1] = color;
+                }
+            }
+            if (!foundEntry) {
+                options.groupColors.push([groupName, color]);
+            }
             // TODO: Persist options
         }
     },
 
     removeGroupColor: async function(groupName) {
         if (groupName) {
-            options.groupColors.delete(groupName);
-            // TODO: Persist options
+            const length = options.groupColors.length;
+            for (const i = 0; i < length; i++) {
+                if (collator.compare(groupName, options.groupColors[i][0]) == 0) {
+                    options.groupColors.splice(i, 1);
+                }
+            }
         }
     },
 
@@ -59,23 +69,16 @@ const controller = {
         //await chrome.storage.sync.clear();
         const data = await chrome.storage.sync.get("options");
         Object.assign(options, data.options);
-        if (!(options.groupColors instanceof Map)) {
-            options.groupColors = new Map();
-        }
         console.log("LOAD OPTIONS:", options);
     },
 
     storeOptions: async function() {
-        if (!(options.groupColors instanceof Map)) {
-            options.groupColors = new Map();
-        }
         console.log("STORE OPTIONS:", options);
         chrome.storage.sync.set({ options });
     },
 };
 
 const ui = {
-    collator: new Intl.Collator(),
     enableSort: document.getElementById("enableSort"),
     enableGroups: document.getElementById("enableGroups"),
     groupThreshold: document.getElementById("groupThreshold"),
@@ -103,8 +106,8 @@ const ui = {
 
     updateGroupColors: function() {
         this.groupColorList.textContent = '';
-        const entries = Array.from(options.groupColors.entries());
-        entries.sort((e1, e2) => this.collator.compare(e1[0], e2[0]));
+        const entries = Array.from(options.groupColors);
+        entries.sort((e1, e2) => collator.compare(e1[0], e2[0]));
         for (const groupColor of entries) {
             const groupName = groupColor[0];
             const color = groupColor[1];
