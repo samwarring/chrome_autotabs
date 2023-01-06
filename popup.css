@@ -1,0 +1,81 @@
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-background: black;
+        --color-foreground: white;
+        --color-button-background: black;
+        --color-button-foreground: white;
+        --color-button-border: white;
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        --color-background: white;
+        --color-foreground: black;
+        --color-button-background: white;
+        --color-button-foreground: black;
+        --color-button-border: black;
+    }
+}
+
+* {
+    font-family: 'Antic Slab', sans-serif;
+}
+
+body {
+    min-width: 350px;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+}
+
+header {
+    margin: 8px;
+}
+
+.option {
+    margin: 20px;
+}
+
+.optionValue {
+    padding: 8px;
+}
+
+.optionDescription {
+    padding: 8px;
+}
+
+.optionDescriptionBrief {
+    font-size: medium;
+}
+
+.optionDescriptionDetails {
+    font-size: medium;
+}
+
+.spinValue {
+    font-size: large;
+    margin: 1rem;
+}
+
+.spinButton {
+    width: 2rem;
+    height: 2rem;
+    cursor: pointer;
+}
+
+.spinDecrease:active {
+    background-color: tomato;
+}
+
+.spinIncrease:active {
+    background-color: greenyellow;
+}
+
+input[type=button] {
+    background-color: var(--color-button-background);
+    color: var(--color-button-foreground);
+    border-color: var(--color-button-border);
+    border-radius: 16px;
+    border-style: solid;
+    font-size: medium;
+}
