@@ -50,7 +50,7 @@ const controller = {
             if (!foundEntry) {
                 options.groupColors.push([groupName, color]);
             }
-            // TODO: Persist options
+            this.storeOptions();
         }
     },
 
@@ -62,6 +62,7 @@ const controller = {
                     options.groupColors.splice(i, 1);
                 }
             }
+            this.storeOptions();
         }
     },
 
