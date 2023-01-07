@@ -28,7 +28,7 @@
     --color-tab-pink: #FF83CD;
     --color-tab-purple: #B0A4FF;
     --color-tab-teal: #00BBC6;
-    --color-tab-gray: #B8B8B8;
+    --color-tab-grey: #B8B8B8;
 }
 
 * {
@@ -231,7 +231,7 @@ option[value='teal'] {
     background-color: var(--color-tab-teal);
 }
 
-.gray,
-option[value='gray'] {
-    background-color: var(--color-tab-gray);
+.grey,
+option[value='grey'] {
+    background-color: var(--color-tab-grey);
 }

@@ -109,6 +109,15 @@ const organizer = {
         }
     },
 
+    getGroupColor: function(groupName) {
+        for (const entry of options.groupColors) {
+            if (this.collator.compare(groupName, entry[0]) == 0) {
+                return entry[1];
+            }
+        }
+        return null;
+    },
+
     getLogicalGroups: async function(windowId) {
         // Get info about existing groups.
         const tabs = await this.getAllTabs(windowId);
@@ -178,7 +187,14 @@ const organizer = {
                         createProperties: { windowId },
                         tabIds
                     });
-                    await chrome.tabGroups.update(tabGroupId, { title: groupKey });
+                    const updateProperties = {
+                        title: groupKey
+                    };
+                    const groupColor = this.getGroupColor(groupKey);
+                    if (groupColor) {
+                        updateProperties.color = groupColor;
+                    }
+                    await chrome.tabGroups.update(tabGroupId, updateProperties);
                 }
                 else if (moveToGroupId != -1) {
                     // At least one tab was in the right group. Add the missing tabs to it.
@@ -187,6 +203,18 @@ const organizer = {
                         .filter((tab) => tab.groupId != moveToGroupId)
                         .map((tab) => tab.id));
                     await chrome.tabs.group({ tabIds, groupId: moveToGroupId });
+                    const groupColor = this.getGroupColor(groupKey);
+                    if (groupColor) {
+                        await chrome.tabGroups.update(moveToGroupId, { color: groupColor });
+                    }
+                }
+                else {
+                    // All tabs already in the right group. Only need to fix the color if necessary.
+                    const tabGroupId = this.getSetValue(groupIds);
+                    const groupColor = this.getGroupColor(groupKey);
+                    if (groupColor) {
+                        await chrome.tabGroups.update(tabGroupId, { color: groupColor });
+                    }
                 }
             }
             else {
