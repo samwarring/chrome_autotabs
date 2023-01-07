@@ -56,8 +56,7 @@ const controller = {
 
     removeGroupColor: async function(groupName) {
         if (groupName) {
-            const length = options.groupColors.length;
-            for (const i = 0; i < length; i++) {
+            for (let i = 0; i < options.groupColors.length; i++) {
                 if (collator.compare(groupName, options.groupColors[i][0]) == 0) {
                     options.groupColors.splice(i, 1);
                 }

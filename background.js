@@ -235,6 +235,17 @@ const organizer = {
         await chrome.tabs.ungroup(tabIds);
     },
 
+    updateGroupColors: async function(windowId) {
+        const tabGroups = await chrome.tabGroups.query({ windowId });
+        for (const tabGroup of tabGroups) {
+            const desiredColor = this.getGroupColor(tabGroup.title);
+            if (desiredColor && desiredColor != tabGroup.color) {
+                console.log("UPDATE GROUP COLOR", { title: tabGroup.title, color: desiredColor });
+                await chrome.tabGroups.update(tabGroup.id, { color: desiredColor });
+            }
+        }
+    },
+
     handleOptionsUpdate: async function(newOptions) {
         const oldOptions = {};
         Object.assign(oldOptions, options);
@@ -251,6 +262,9 @@ const organizer = {
             }
             else if (!newOptions.enableGroups && oldOptions.enableGroups) {
                 await this.ungroupAllTabs(window.id);
+            }
+            else {
+                await this.updateGroupColors();
             }
         }
     }
