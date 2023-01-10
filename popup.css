@@ -1,7 +1,8 @@
 @media (prefers-color-scheme: dark) {
     :root {
-        --color-background: rgb(32, 32, 32);
+        --color-background: rgb(60, 60, 60);
         --color-foreground: white;
+        --color-tab-text: black;
     }
 }
 
@@ -9,6 +10,7 @@
     :root {
         --color-background: white;
         --color-foreground: black;
+        --color-tab-text: white;
     }
 }
 
@@ -20,7 +22,6 @@
     --color-positive: greenyellow;
     --color-negative: tomato;
     /* Tab group colors */
-    --color-tab-text: black;
     --color-tab-blue: #75C4FF;
     --color-tab-red: #FF6C6C;
     --color-tab-orange: #FFB900;
@@ -32,7 +33,8 @@
 }
 
 * {
-    font-family: 'Antic Slab', sans-serif;
+    /* font-family: 'Questrial', sans-serif; */
+    font-family: 'Raleway', sans-serif;
 }
 
 body {
@@ -178,7 +180,7 @@ input[type=button] {
 }
 
 #groupColorList li label {
-    color: black;
+    color: var(--color-tab-text);
     font-size: medium;
     padding: 4px;
     border-radius: 8px;
