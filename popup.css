@@ -67,6 +67,10 @@ header {
     font-size: medium;
 }
 
+.credits {
+    padding-left: 8px;
+}
+
 .spinValue {
     font-size: large;
     margin: 1rem;
