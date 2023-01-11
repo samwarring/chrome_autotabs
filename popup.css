@@ -22,14 +22,15 @@
     --color-positive: greenyellow;
     --color-negative: tomato;
     /* Tab group colors */
+    --color-tab-grey: #B8B8B8;
     --color-tab-blue: #75C4FF;
     --color-tab-red: #FF6C6C;
-    --color-tab-orange: #FFB900;
+    --color-tab-yellow: #FDD663;
     --color-tab-green: #7FDA91;
     --color-tab-pink: #FF83CD;
     --color-tab-purple: #B0A4FF;
     --color-tab-cyan: #00BBC6;
-    --color-tab-grey: #B8B8B8;
+    --color-tab-orange: #FFB900;
 }
 
 * {
@@ -235,4 +236,9 @@ option[value='cyan'] {
 .grey,
 option[value='grey'] {
     background-color: var(--color-tab-grey);
+}
+
+.yellow,
+option[value='yellow'] {
+    background-color: var(--color-tab-yellow);
 }
