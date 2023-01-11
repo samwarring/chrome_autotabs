@@ -19,7 +19,14 @@ const organizer = {
                 "http://*/*",
                 "https://*/*"
             ],
-            windowId
+            windowId,
+            pinned: false
+        });
+    },
+
+    getPinnedTabs: async function(windowId) {
+        return chrome.tabs.query({
+            pinned: true
         });
     },
 
@@ -67,10 +74,16 @@ const organizer = {
         keyedTabs.sort((a, b) => this.compareSortKeys(a.key, b.key));
         console.log("SORTED TABS:", keyedTabs.map((keyedTab) => keyedTab.tab.url));
 
+        // We are only dealing with unpinned tabs. All tab positions need to be
+        // offset by the number of pinned tabs.
+        const pinnedTabs = await this.getPinnedTabs(windowId);
+        const numPinnedTabs = pinnedTabs.length;
+
         // Compute how far each tab needs to move
-        for (let newIndex = 0; newIndex < keyedTabs.length; newIndex++) {
-            keyedTabs[newIndex].newIndex = newIndex;
-            keyedTabs[newIndex].distance = Math.abs(keyedTabs[newIndex].tab.index - newIndex);
+        for (let i = 0; i < keyedTabs.length; i++) {
+            const newIndex = i + numPinnedTabs;
+            keyedTabs[i].newIndex = newIndex;
+            keyedTabs[i].distance = Math.abs(keyedTabs[i].tab.index - newIndex);
         }
 
         // Sort the tabs again, this time by how far they need to move.
