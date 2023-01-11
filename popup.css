@@ -28,7 +28,7 @@
     --color-tab-green: #7FDA91;
     --color-tab-pink: #FF83CD;
     --color-tab-purple: #B0A4FF;
-    --color-tab-teal: #00BBC6;
+    --color-tab-cyan: #00BBC6;
     --color-tab-grey: #B8B8B8;
 }
 
@@ -227,9 +227,9 @@ option[value='purple'] {
     background-color: var(--color-tab-purple);
 }
 
-.teal,
-option[value='teal'] {
-    background-color: var(--color-tab-teal);
+.cyan,
+option[value='cyan'] {
+    background-color: var(--color-tab-cyan);
 }
 
 .grey,
