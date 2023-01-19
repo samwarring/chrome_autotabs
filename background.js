@@ -26,6 +26,7 @@ const organizer = {
 
     getPinnedTabs: async function(windowId) {
         return chrome.tabs.query({
+            windowId,
             pinned: true
         });
     },
