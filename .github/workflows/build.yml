@@ -1,0 +1,32 @@
+name: Build Chrome Extension
+on: [push]
+jobs:
+  zip:
+    name: Create ZIP archive
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip jq
+
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Detect version number
+        run: echo "MY_VERSION=$(jq -r .version manifest.json)" >> $GITHUB_ENV
+
+      # This creates a zip of the desired files, so there is no earlier step
+      # to create the zip file.
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: tab_harmony_v${{ env.MY_VERSION }}
+          path: |
+            icons/*.png
+            background.js
+            manifest.json
+            popup.css
+            popup.html
+            popup.js
+
