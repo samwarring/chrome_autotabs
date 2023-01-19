@@ -2,7 +2,11 @@ const options = {
     enableSort: true,
     enableGroups: true,
     groupThreshold: 4,
-    groupColors: [],
+    groupColors: [
+        ["google", "blue"],
+        ["stackoverflow", "orange"],
+        ["duckduckgo", "red"],
+    ],
 };
 
 const loadedOptions = chrome.storage.sync.get().then((items) => {
