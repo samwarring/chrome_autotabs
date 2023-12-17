@@ -11,6 +11,28 @@ const options = {
         ["stackoverflow", "orange"],
         ["duckduckgo", "red"],
     ],
+
+    getGroupColor: function(groupName) {
+        let color = null;
+        const nameParts = groupName.split(' ');
+        let nameSearch = '';
+        // Find a rule for each subdomain of the group name. The longest
+        // match wins.
+        for (const namePart of nameParts) {
+            if (nameSearch == '') {
+                nameSearch = namePart;
+            }
+            else {
+                nameSearch += ' ' + namePart;
+            }
+            for (const colorRule of this.groupColors) {
+                if (colorRule[0] == nameSearch) {
+                    color = colorRule[1];
+                }
+            }
+        }
+        return color;
+    },
 };
 
 // A class whose objects hold all relevant information about a tab.
@@ -99,7 +121,9 @@ class Window {
 
         const endTime = new Date();
         const elapsed = endTime - startTime;
-        console.log("Reorganized", this._tabs.length, "tabs in", elapsed, "ms");
+        console.log(
+            "Reorganized", this._tabs.length, "tabs in window", this._id, "in",
+            elapsed, "ms");
     }
 
     // Retrieves all tabs in the window.
@@ -274,7 +298,7 @@ class Window {
         }
         if (tabsInAnyGroup.length > 0) {
             // Ungroup any tabs that currently belong to a tab group.
-            console.log("Ungrouping", group.name);
+            console.log("Dissolve group:", group.name);
             await chrome.tabs.ungroup(tabsInAnyGroup);
         }
     }
@@ -289,48 +313,67 @@ class Window {
         // Check the current group ids to see if the desired group already
         // exists among them.
         let targetGroupId = null;
-        let updateRequired = false;
+        let requireCreate = true;
+        let requireMove = false;
+        let requireColor = false;
+        const groupColor = options.getGroupColor(group.name);
         for (const [groupIdStr, tabIds] of Object.entries(currentGroupIds)) {
             // XXX: keys are always strings. Need to treat as int.
             const groupId = parseInt(groupIdStr);
             if (groupId == -1) {
                 // One of the tabs doesn't belong to any tab group.
-                updateRequired = true;
+                requireMove = true;
                 continue;
             }
             const tabGroup = await chrome.tabGroups.get(groupId);
             if (tabGroup.title == group.name) {
                 // One of the tabs belongs to the desired tab group.
+                requireCreate = false;
                 targetGroupId = groupId;
+                
+                // Check if the color needs to be updated.
+                if (groupColor != null && tabGroup.color != groupColor) {
+                    requireColor = true;
+                }
                 continue;
             }
             // One of the tabs belongs to the wrong tab group.
-            updateRequired = true;
+            requireMove = true;
         }
 
         // If no updates required, then we're done.
-        if (!updateRequired) {
+        if (!requireCreate && !requireMove && !requireColor) {
             return;
         }
 
         // Get list of all tab ids in the logical group.
         const tabIds = group.tabs.map((tab) => tab.id);
 
-        if (targetGroupId == null) {
-            console.log("Grouping", group.name, "- make new group");
+        // Used to update the new/existing group if necessary.
+        let updateProperties = {};
+
+        if (requireCreate) {
+            console.log("Add group:", group.name);
             // Target group was not found, make a new group.
-            const tabGroupId = await chrome.tabs.group({
+            targetGroupId = await chrome.tabs.group({
                 createProperties: { windowId: this._id },
                 tabIds
             });
-            await chrome.tabGroups.update(tabGroupId, {
-                title: group.name
-            });
+            updateProperties.title = group.name;
+            requireColor = true;
         }
-        else {
-            console.log("Grouping", group.name, "- add to existing group");
+        else if (requireMove) {
+            console.log("Edit group:", group.name);
             // Target group already exists. Move tabs to that group.
             await chrome.tabs.group({ tabIds, groupId: targetGroupId });
+        }
+
+        // Update group name/color if necessary.
+        if (requireColor && groupColor != null) {
+            updateProperties.color = groupColor;
+        }
+        if (Object.keys(updateProperties).length > 0) {
+            await chrome.tabGroups.update(targetGroupId, updateProperties);
         }
     }
 }
@@ -344,6 +387,23 @@ class Window {
     const storage = await chrome.storage.sync.get();
     Object.assign(options, storage.options);
     console.log("Loaded options:", options);
+
+    // Register callback when settings get updated.
+    chrome.storage.onChanged.addListener(async (changes, area) => {
+        if (area == 'sync') {
+            Object.assign(options, changes.options.newValue);
+            console.log("Updated options:", options);
+
+            // Reorganize tabs in all windows.
+            const chromeWindows = await chrome.windows.getAll({
+                windowTypes: ['normal']
+            });
+            for (const chromeWindow of chromeWindows) {
+                const window = new Window(chromeWindow.id);
+                await window.sortAndGroupTabs();
+            }
+        };
+    });
 
     // Register callback when a tab gets updated.
     chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
