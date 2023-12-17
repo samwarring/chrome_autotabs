@@ -1,7 +1,5 @@
 // Default options
 let options = {
-    enableSort: true,
-    enableGroups: true,
     groupThreshold: 4,
     groupColors: [
         ["google", "blue"],
@@ -14,16 +12,6 @@ let options = {
 const collator = new Intl.Collator();
 
 const controller = {
-    enableSort: async function(isEnabled) {
-        options.enableSort = isEnabled;
-        this.storeOptions();
-    },
-
-    enableGroups: async function(isEnabled) {
-        options.enableGroups = isEnabled;
-        this.storeOptions();
-    },
-
     decreaseGroupThreshold: async function() {
         if (options.groupThreshold > 2) {
             options.groupThreshold--;
@@ -79,8 +67,6 @@ const controller = {
 };
 
 const ui = {
-    enableSort: document.getElementById("enableSort"),
-    enableGroups: document.getElementById("enableGroups"),
     groupThreshold: document.getElementById("groupThreshold"),
     decreaseGroupThreshold: document.getElementById("decreaseGroupThreshold"),
     increaseGroupThreshold: document.getElementById("increaseGroupThreshold"),
@@ -91,8 +77,6 @@ const ui = {
     groupColorTemplate: document.getElementById("groupColorTemplate"),
 
     updateAll: function() {
-        this.enableSort.checked = options.enableSort;
-        this.enableGroups.checked = options.enableGroups;
         this.groupThreshold.textContent = String(options.groupThreshold);
         this.updateGroupColorSelect();
         this.updateGroupColors();
@@ -130,12 +114,6 @@ const ui = {
     },
 
     addEventListeners: function() {
-        this.enableSort.addEventListener("change", async (event) => {
-            await controller.enableSort(event.target.checked);
-        });
-        this.enableGroups.addEventListener("change", async (event) => {
-            await controller.enableGroups(event.target.checked);
-        });
         this.decreaseGroupThreshold.addEventListener("click", async () => {
             await controller.decreaseGroupThreshold();
             this.groupThreshold.textContent = String(options.groupThreshold);

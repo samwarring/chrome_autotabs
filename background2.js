@@ -3,8 +3,6 @@ const collator = new Intl.Collator();
 
 // Extension options
 const options = {
-    enableSort: true,
-    enableGroups: true,
     groupThreshold: 4,
     groupColors: [
         ["google", "blue"],
