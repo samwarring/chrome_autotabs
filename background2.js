@@ -323,7 +323,13 @@ class Window {
                 requireMove = true;
                 continue;
             }
-            const tabGroup = await chrome.tabGroups.get(groupId);
+            let tabGroup = {};
+            try {
+                tabGroup = await chrome.tabGroups.get(groupId);
+            } catch (error) {
+                // The group for this tab may have just been dissolved, which
+                // could cause an error getting the tab group here. Ignore it.
+            }
             if (tabGroup.title == group.name) {
                 // One of the tabs belongs to the desired tab group.
                 requireCreate = false;
