@@ -76,18 +76,23 @@ header {
     margin: 1rem;
 }
 
-.spinButton {
+.plusButton {
     width: 2rem;
     height: 2rem;
 }
 
-.spinDecrease:hover {
-    background-color: var(--color-negative);
+.minusButton {
+    width: 2rem;
+    height: 2rem;
+}
+
+.plusButton:hover {
+    background-color: var(--color-positive);
     color: black;
 }
 
-.spinIncrease:hover {
-    background-color: var(--color-positive);
+.minusButton:hover {
+    background-color: var(--color-negative);
     color: black;
 }
 
@@ -99,6 +104,15 @@ input[type=button] {
     border-style: solid;
     font-size: medium;
     cursor: pointer;
+}
+
+.inputText {
+    font-size: medium;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    border-style: solid;
+    border-radius: 8px;
+    margin: 2px;
 }
 
 /*
@@ -144,18 +158,35 @@ input[type=button] {
 
 /*
     ----------------------------------------------------
-    Group color UI
+    Alt domain UI
 */
 
-#newGroupColorAdd {
-    width: 2em;
-    height: 2em;
+#altDomainList {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
 }
 
-#newGroupColorAdd:hover {
-    background-color: var(--color-positive);
-    color: black;
+#altDomainList li {
+    margin: 4px;
+    margin-left: 0;
 }
+
+#altDomainList li label {
+    color: var(--color-foreground);
+    font-size: medium;
+    padding: 4px;
+    border-radius: 8px;
+}
+
+#altDomainList li input[type=button] {
+    margin-left: 0;
+}
+
+/*
+    ----------------------------------------------------
+    Group color UI
+*/
 
 #newGroupColorColor {
     color: var(--color-tab-text);
@@ -164,11 +195,6 @@ input[type=button] {
 }
 
 #newGroupColorName {
-    font-size: medium;
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    border-style: solid;
-    border-radius: 8px;
     width: 50%;
 }
 
@@ -191,15 +217,7 @@ input[type=button] {
 }
 
 #groupColorList li input[type=button] {
-    width: 2em;
-    height: 2em;
     margin-left: 0;
-}
-
-#groupColorList li input[type=button]:hover {
-    background-color: var(--color-negative);
-    color: black;
-    cursor: pointer;
 }
 
 .blue,

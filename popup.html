@@ -13,9 +13,9 @@
     <div class="option">
         <h2>Tab Group Size</h2>
         <div class="optionValue">
-            <input id="decreaseGroupThreshold" type="button" class="spinButton spinDecrease" value="-" />
+            <input id="decreaseGroupThreshold" type="button" class="spinButton minusButton" value="-" />
             <span id="groupThreshold" class="spinValue">0</span>
-            <input id="increaseGroupThreshold" type="button" class="spinButton spinIncrease" value="+" />
+            <input id="increaseGroupThreshold" type="button" class="spinButton plusButton" value="+" />
         </div>
         <div class="optionDescription">
             <p class="optionDescriptionBrief">
@@ -28,6 +28,42 @@
         </div>
     </div>
     <div class="option">
+        <h2>Alternate Domain Names</h2>
+        <div class="optionDescription">
+            <p class="optionDescriptionBrief">
+                Alter the domain name of a tab before sorting and grouping.
+            </p>
+            <p class="optionDescriptionDetails">
+                Provide a URL pattern and an alternate domain name. Tabs whose
+                urls match the pattern will be sorted and grouped according to
+                their alternate domain name.
+            </p>
+        </div>
+        <div class="optionValue">
+            <table>
+                <tr>
+                    <td>
+                        <input id="altDomainAdd" type="button" class="plusButton" value="+" />
+                    </td>
+                    <td>
+                        <input id="altDomainPattern" class="inputText" placeholder="www.google.com/search"/>
+                        <input id="altDomainDomain" class="inputText" placeholder="search.google.com"/>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="optionValue">
+            <template id="altDomainTemplate">
+                <li>
+                    <input type="button" value="-" class="minusButton" />
+                    <label>pattern &rarr; domain</label>
+                </li>
+            </template>
+            <ul id="altDomainList">
+            </ul>
+        </div>
+    </div>
+    <div class="option">
         <h2>Group Colors</h2>
         <div class="optionDescription">
             <p class="optionDescriptionBrief">
@@ -35,7 +71,7 @@
             </p>
         </div>
         <div class="optionValue">
-            <input id="newGroupColorAdd" type="button" class="groupColorButton" value="+" />
+            <input id="newGroupColorAdd" type="button" class="plusButton" value="+" />
             <select id="newGroupColorColor" class="groupColorSelect">
                 <option value="grey">Gray</option>
                 <option value="blue">Blue</option>
@@ -47,12 +83,12 @@
                 <option value="cyan">Cyan</option>
                 <option value="orange">Orange</option>
             </select>
-            <input id="newGroupColorName" placeholder="e.g. 'google'" />
+            <input id="newGroupColorName" class="inputText" placeholder="google" />
         </div>
         <div class="optionValue">
             <template id="groupColorTemplate">
                 <li>
-                    <input type="button" value="-" />
+                    <input type="button" value="-" class="minusButton" />
                     <label>groupname</label>
                 </li>
             </template>

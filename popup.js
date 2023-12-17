@@ -1,6 +1,9 @@
 // Default options
 let options = {
     groupThreshold: 4,
+    altDomains: [
+        ["www.google.com", "search.google.com"],
+    ],
     groupColors: [
         ["google", "blue"],
         ["stackoverflow", "orange"],
@@ -24,6 +27,31 @@ const controller = {
             options.groupThreshold++;
             this.storeOptions();
         }
+    },
+
+    addAltDomain: async function(pattern, domain) {
+        if (pattern.trim() != '' && domain.trim() != '') {
+            let foundEntry = false;
+            for (const entry of options.altDomains) {
+                if (collator.compare(pattern, entry[0]) == 0) {
+                    foundEntry = true;
+                    entry[1] = domain;
+                }
+            }
+            if (!foundEntry) {
+                options.altDomains.push([pattern, domain]);
+            }
+            this.storeOptions();
+        }
+    },
+
+    removeAltDomain: async function(pattern) {
+        for (let i = 0; i < options.altDomains.length; i++) {
+            if (collator.compare(pattern, options.altDomains[i][0]) == 0) {
+                options.altDomains.splic(i, 1);
+            }
+        }
+        this.storeOptions();
     },
 
     addGroupColor: async function(groupName, color) {
@@ -70,6 +98,11 @@ const ui = {
     groupThreshold: document.getElementById("groupThreshold"),
     decreaseGroupThreshold: document.getElementById("decreaseGroupThreshold"),
     increaseGroupThreshold: document.getElementById("increaseGroupThreshold"),
+    altDomainAdd: document.getElementById("altDomainAdd"),
+    altDomainPattern: document.getElementById("altDomainPattern"),
+    altDomainDomain: document.getElementById("altDomainDomain"),
+    altDomainList: document.getElementById("altDomainList"),
+    altDomainTemplate: document.getElementById("altDomainTemplate"),
     newGroupColorAdd: document.getElementById("newGroupColorAdd"),
     newGroupColorColor: document.getElementById("newGroupColorColor"),
     newGroupColorName: document.getElementById("newGroupColorName"),
@@ -78,8 +111,33 @@ const ui = {
 
     updateAll: function() {
         this.groupThreshold.textContent = String(options.groupThreshold);
+        this.updateAltDomains();
         this.updateGroupColorSelect();
         this.updateGroupColors();
+    },
+
+    updateAltDomains: function() {
+        this.altDomainList.textContent = '';
+        const entries = Array.from(options.altDomains);
+        entries.sort((e1, e2) => collator.compare(e1[0], e2[0]));
+        for (const altDomain of entries) {
+            const pattern = altDomain[0];
+            const domain = altDomain[1];
+            this.addAltDomain(pattern, domain);
+        }
+    },
+
+    addAltDomain: function(pattern, domain) {
+        const listItem = this.altDomainTemplate.content.firstElementChild.cloneNode(true);
+        const button = listItem.querySelector("input[type='button']");
+        const label = listItem.querySelector("label");
+        label.textContent = pattern + " → " + domain;
+        this.altDomainList.append(listItem);
+
+        button.addEventListener("click", () => {
+            controller.removeAltDomain(pattern);
+            this.altDomainList.removeChild(listItem);
+        });
     },
 
     updateGroupColorSelect: function() {
@@ -121,6 +179,12 @@ const ui = {
         this.increaseGroupThreshold.addEventListener("click", async () => {
             await controller.increaseGroupThreshold();
             this.groupThreshold.textContent = String(options.groupThreshold);
+        });
+        this.altDomainAdd.addEventListener("click", async () => {
+            const pattern = this.altDomainPattern.value;
+            const domain = this.altDomainDomain.value;
+            await controller.addAltDomain(pattern, domain);
+            this.updateAltDomains();
         });
         this.newGroupColorColor.addEventListener("change", (event) => {
             this.updateGroupColorSelect();

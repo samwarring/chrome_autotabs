@@ -4,6 +4,9 @@ const collator = new Intl.Collator();
 // Extension options
 const options = {
     groupThreshold: 4,
+    altDomains: [
+        ["www.google.com", "search.google.com"],
+    ],
     groupColors: [
         ["google", "blue"],
         ["stackoverflow", "orange"],
@@ -31,6 +34,18 @@ const options = {
         }
         return color;
     },
+
+    getAltDomain: function(url) {
+        // Compare url to all registered rules.
+        for (const altDomain of this.altDomains) {
+            const pattern = altDomain[0];
+            const domain = altDomain[1];
+            if (url.host == pattern) {
+                return domain;
+            }
+        }
+        return url.host;
+    }
 };
 
 // A class whose objects hold all relevant information about a tab.
@@ -46,7 +61,8 @@ class Tab {
 
         // Calculate the reversed hostname without TLD.
         const url = new URL(tab.url);
-        let hostParts = url.host.split('.');
+        this.host = options.getAltDomain(url);
+        let hostParts = this.host.split('.');
         if (hostParts.length > 1) {
             hostParts.pop();
             hostParts.reverse();
