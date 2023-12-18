@@ -48,7 +48,7 @@ const controller = {
     removeAltDomain: async function(pattern) {
         for (let i = 0; i < options.altDomains.length; i++) {
             if (collator.compare(pattern, options.altDomains[i][0]) == 0) {
-                options.altDomains.splic(i, 1);
+                options.altDomains.splice(i, 1);
             }
         }
         this.storeOptions();
