@@ -30,7 +30,20 @@ const controller = {
     },
 
     addAltDomain: async function(pattern, domain) {
-        if (pattern.trim() != '' && domain.trim() != '') {
+        if (pattern == '' && domain == '') {
+            // Do nothing.
+            return;
+        }
+        const validDomain = new RegExp("^[a-zA-Z0-9_]+(.[a-zA-Z0-9_]+)*$");
+        if (pattern.match(validDomain) == null) {
+            ui.showAltDomainErrorMessage(true, ui.INVALID_ALT_DOMAIN_PATTERN);
+            return;
+        }
+        else if (domain.match(validDomain) == null) {
+            ui.showAltDomainErrorMessage(true, ui.INVALID_ALT_DOMAIN_DOMAIN);
+            return;
+        }
+        else {
             let foundEntry = false;
             for (const entry of options.altDomains) {
                 if (collator.compare(pattern, entry[0]) == 0) {
@@ -39,9 +52,10 @@ const controller = {
                 }
             }
             if (!foundEntry) {
-                options.altDomains.push([pattern, domain]);
+                options.altDomains.push([pattern.trim(), domain.trim()]);
             }
             this.storeOptions();
+            ui.showAltDomainErrorMessage(false);
         }
     },
 
@@ -101,6 +115,7 @@ const ui = {
     altDomainAdd: document.getElementById("altDomainAdd"),
     altDomainPattern: document.getElementById("altDomainPattern"),
     altDomainDomain: document.getElementById("altDomainDomain"),
+    altDomainErrorMesage: document.getElementById("altDomainErrorMessage"),
     altDomainList: document.getElementById("altDomainList"),
     altDomainTemplate: document.getElementById("altDomainTemplate"),
     newGroupColorAdd: document.getElementById("newGroupColorAdd"),
@@ -108,6 +123,9 @@ const ui = {
     newGroupColorName: document.getElementById("newGroupColorName"),
     groupColorList: document.getElementById("groupColorList"),
     groupColorTemplate: document.getElementById("groupColorTemplate"),
+
+    INVALID_ALT_DOMAIN_PATTERN: "Alternate domain pattern is not a valid domain name.",
+    INVALID_ALT_DOMAIN_DOMAIN: "Alternate domain replacement is not a valid domain name.",
 
     updateAll: function() {
         this.groupThreshold.textContent = String(options.groupThreshold);
@@ -138,6 +156,11 @@ const ui = {
             controller.removeAltDomain(pattern);
             this.altDomainList.removeChild(listItem);
         });
+    },
+
+    showAltDomainErrorMessage(visible, message = "") {
+        this.altDomainErrorMesage.textContent = message;
+        this.altDomainErrorMesage.style.display = (visible ? 'block' : 'none');
     },
 
     updateGroupColorSelect: function() {

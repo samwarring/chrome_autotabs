@@ -183,6 +183,11 @@ input[type=button] {
     margin-left: 0;
 }
 
+#altDomainErrorMessage {
+    color: var(--color-negative);
+    display: none;
+}
+
 /*
     ----------------------------------------------------
     Group color UI

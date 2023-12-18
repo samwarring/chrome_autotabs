@@ -40,17 +40,12 @@
             </p>
         </div>
         <div class="optionValue">
-            <table>
-                <tr>
-                    <td>
-                        <input id="altDomainAdd" type="button" class="plusButton" value="+" />
-                    </td>
-                    <td>
-                        <input id="altDomainPattern" class="inputText" placeholder="www.google.com/search"/>
-                        <input id="altDomainDomain" class="inputText" placeholder="search.google.com"/>
-                    </td>
-                </tr>
-            </table>
+            <input id="altDomainAdd" type="button" class="plusButton" value="+" />
+            <label>Pattern</label>
+            <input id="altDomainPattern" class="inputText" placeholder="www.google.com"/>
+            <label>Replacement</label>
+            <input id="altDomainDomain" class="inputText" placeholder="search.google.com"/>
+            <p id="altDomainErrorMessage">Invalid pattern. Must be a valid domain name.</p>
         </div>
         <div class="optionValue">
             <template id="altDomainTemplate">
