@@ -35,16 +35,34 @@ const options = {
         return color;
     },
 
-    getAltDomain: function(url) {
-        // Compare url to all registered rules.
+    getHostParts: function(url) {
+        // First, check for an alternate domain
+        let host = url.host;
         for (const altDomain of this.altDomains) {
             const pattern = altDomain[0];
-            const domain = altDomain[1];
-            if (url.host == pattern) {
-                return domain;
+            const replacement = altDomain[1];
+            if (host == pattern) {
+                host = replacement;
             }
         }
-        return url.host;
+
+        // If the host is an IPv4 address, use that as it's own hostPart
+        const ipv4Pattern = new RegExp(
+            "^([0-9]|[0-9]{2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])" +         // first octet
+            "([.]([0-9]|[0-9]{2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3}" +  // next 3 octets
+            "(:[0-9]+)?$");                                             // port number
+        if (host.match(ipv4Pattern) != null) {
+            return [host];
+        }
+
+        // If the host is just one token, use that. Otherwise, strip
+        // the last token and reverse the remaining tokens.
+        let hostParts = host.split('.');
+        if (hostParts.length > 1) {
+            hostParts.pop();
+            hostParts.reverse();
+        }
+        return hostParts;
     }
 };
 
@@ -58,16 +76,8 @@ class Tab {
         this.index = tab.index;
         this.desiredIndex = -1;
         this.moveDistance = 0;
-
-        // Calculate the reversed hostname without TLD.
         const url = new URL(tab.url);
-        this.host = options.getAltDomain(url);
-        let hostParts = this.host.split('.');
-        if (hostParts.length > 1) {
-            hostParts.pop();
-            hostParts.reverse();
-        }
-        this.hostParts = hostParts;
+        this.hostParts = options.getHostParts(url);
         this.path = url.pathname;
     }
 
@@ -135,9 +145,8 @@ class Window {
 
         const endTime = new Date();
         const elapsed = endTime - startTime;
-        console.log(
-            "Reorganized", this._tabs.length, "tabs in window", this._id, "in",
-            elapsed, "ms");
+
+        console.log(`[window ${this._id}] Reorganized ${this._tabs.length} tabs in ${elapsed} ms`);
     }
 
     // Retrieves all tabs in the window.
@@ -312,7 +321,7 @@ class Window {
         }
         if (tabsInAnyGroup.length > 0) {
             // Ungroup any tabs that currently belong to a tab group.
-            console.log("Dissolve group:", group.name);
+            console.log(`[window ${this._id}] Ungroup: ${group.name}`);
             await chrome.tabs.ungroup(tabsInAnyGroup);
         }
     }
@@ -373,7 +382,7 @@ class Window {
         let updateProperties = {};
 
         if (requireCreate) {
-            console.log("Add group:", group.name);
+            console.log(`[window ${this._id}] Add group: ${group.name}`);
             // Target group was not found, make a new group.
             targetGroupId = await chrome.tabs.group({
                 createProperties: { windowId: this._id },
@@ -383,7 +392,7 @@ class Window {
             requireColor = true;
         }
         else if (requireMove) {
-            console.log("Edit group:", group.name);
+            console.log(`[window ${this._id}] Edit group: ${group.name}`);
             // Target group already exists. Move tabs to that group.
             await chrome.tabs.group({ tabIds, groupId: targetGroupId });
         }
@@ -437,6 +446,14 @@ class Window {
     chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
         if (!removeInfo.isWindowClosing) {
             const window = new Window(removeInfo.windowId);
+            await window.sortAndGroupTabs();
+        }
+    });
+
+    // Register callback when a tab gets created.
+    chrome.tabs.onCreated.addListener(async (tab) => {
+        if (tab.status == "complete" && "url" in tab && tab.url != '') {
+            const window = new Window(tab.windowId);
             await window.sortAndGroupTabs();
         }
     });
