@@ -34,17 +34,26 @@
                 Alter the domain name of a tab before sorting and grouping.
             </p>
             <p class="optionDescriptionDetails">
-                Provide a URL pattern and an alternate domain name. Tabs whose
+                Provide a pattern and an alternate domain name. Tabs whose
                 urls match the pattern will be sorted and grouped according to
                 their alternate domain name.
+            </p>
+            <p class="optionDescriptionDetails">
+                The pattern must be a valid regular expression, and is matched against
+                the entire URL (host and path). The replacement must be a valid domain name.
             </p>
         </div>
         <div class="optionValue">
             <input id="altDomainAdd" type="button" class="plusButton" value="+" />
+            <br />
             <label>Pattern</label>
-            <input id="altDomainPattern" class="inputText" placeholder="www.google.com"/>
+            <br />
+            <input id="altDomainPattern" class="inputText" placeholder="^www.google.com/search.*$" />
+            <br />
             <label>Replacement</label>
-            <input id="altDomainDomain" class="inputText" placeholder="search.google.com"/>
+            <br />
+            <input id="altDomainDomain" class="inputText" placeholder="search.google.com" />
+            <br />
             <p id="altDomainErrorMessage">Invalid pattern. Must be a valid domain name.</p>
         </div>
         <div class="optionValue">

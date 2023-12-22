@@ -161,6 +161,14 @@ input[type=button] {
     Alt domain UI
 */
 
+#altDomainPattern {
+    width: 100%;
+}
+
+#altDomainDomain {
+    width: 100%
+}
+
 #altDomainList {
     list-style-type: none;
     margin: 0;

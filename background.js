@@ -5,7 +5,8 @@ const collator = new Intl.Collator();
 const options = {
     groupThreshold: 4,
     altDomains: [
-        ["www.google.com", "search.google.com"],
+        ["^www.google.com/search.*$", "search.google.com"],
+        ["^www.google.com/maps.*$", "maps.google.com"]
     ],
     groupColors: [
         ["google", "blue"],
@@ -38,10 +39,18 @@ const options = {
     getHostParts: function(url) {
         // First, check for an alternate domain
         let host = url.host;
+        let hostAndPath = url.host + url.pathname;
         for (const altDomain of this.altDomains) {
             const pattern = altDomain[0];
             const replacement = altDomain[1];
-            if (host == pattern) {
+            let compiledPattern = null;
+            try {
+                compiledPattern = new RegExp(pattern);
+            } catch (err) {
+                // If pattern was not valid regex, ignore it.
+                continue;
+            }
+            if (hostAndPath.match(compiledPattern)) {
                 host = replacement;
             }
         }

@@ -2,7 +2,8 @@
 let options = {
     groupThreshold: 4,
     altDomains: [
-        ["www.google.com", "search.google.com"],
+        ["^www.google.com/search.*$", "search.google.com"],
+        ["^www.google.com/maps.*$", "maps.google.com"]
     ],
     groupColors: [
         ["google", "blue"],
@@ -34,29 +35,38 @@ const controller = {
             // Do nothing.
             return;
         }
-        const validDomain = new RegExp("^[a-zA-Z0-9_]+(.[a-zA-Z0-9_]+)*$");
-        if (pattern.match(validDomain) == null) {
+
+        // Validate the pattern.
+        let compiledPattern = null;
+        try {
+            compiledPattern = new RegExp(pattern);
+        } catch(err) {
             ui.showAltDomainErrorMessage(true, ui.INVALID_ALT_DOMAIN_PATTERN);
             return;
         }
-        else if (domain.match(validDomain) == null) {
+
+        // Validate the replacement domain.
+        const validDomain = new RegExp("^[a-zA-Z0-9_]+(.[a-zA-Z0-9_]+)*$");
+        if (domain.match(validDomain) == null) {
             ui.showAltDomainErrorMessage(true, ui.INVALID_ALT_DOMAIN_DOMAIN);
             return;
         }
-        else {
-            let foundEntry = false;
-            for (const entry of options.altDomains) {
-                if (collator.compare(pattern, entry[0]) == 0) {
-                    foundEntry = true;
-                    entry[1] = domain;
-                }
+        
+        // Save the alt domain in the options. Replace existing rule if any.
+        let foundEntry = false;
+        for (const entry of options.altDomains) {
+            if (collator.compare(pattern, entry[0]) == 0) {
+                foundEntry = true;
+                entry[1] = domain;
             }
-            if (!foundEntry) {
-                options.altDomains.push([pattern.trim(), domain.trim()]);
-            }
-            this.storeOptions();
-            ui.showAltDomainErrorMessage(false);
         }
+        if (!foundEntry) {
+            options.altDomains.push([pattern.trim(), domain.trim()]);
+        }
+        this.storeOptions();
+
+        // Hide the error message.
+        ui.showAltDomainErrorMessage(false);
     },
 
     removeAltDomain: async function(pattern) {
@@ -124,7 +134,7 @@ const ui = {
     groupColorList: document.getElementById("groupColorList"),
     groupColorTemplate: document.getElementById("groupColorTemplate"),
 
-    INVALID_ALT_DOMAIN_PATTERN: "Alternate domain pattern is not a valid domain name.",
+    INVALID_ALT_DOMAIN_PATTERN: "Alternate domain pattern is not a valid regular expression.",
     INVALID_ALT_DOMAIN_DOMAIN: "Alternate domain replacement is not a valid domain name.",
 
     updateAll: function() {
