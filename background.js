@@ -85,9 +85,14 @@ class Tab {
         this.index = tab.index;
         this.desiredIndex = -1;
         this.moveDistance = 0;
-        const url = new URL(tab.url);
-        this.hostParts = options.getHostParts(url);
-        this.path = url.pathname;
+        try {
+            const url = new URL(tab.url);
+            this.hostParts = options.getHostParts(url);    
+            this.path = url.pathname;
+        } catch (error) {
+            this.hostParts = [];
+            this.path = "";
+        }
     }
 
     // otherTab: Another instance of Tab.
@@ -96,7 +101,9 @@ class Tab {
     //          1 if this tab should be sorted after otherTab.
     //
     // Tabs are sorted alphabetically by reversed domain name, then
-    // by path for those tabs that share a reversed domain name.
+    // by path for those tabs that share a reversed domain name. If
+    // the paths are also the same, then preserve the existing sorted
+    // order of the tabs.
     compareTo(otherTab) {
         // Minimum number of host parts to compare.
         const minPartsLen = Math.min(
@@ -115,7 +122,20 @@ class Tab {
         // Host parts up to the minimum size were equal.
         if (this.hostParts.length == otherTab.hostParts.length) {
             // Reversed hostnames were the same. Compare by path.
-            return collator.compare(this.path, otherTab.path);
+            const pathCompare = collator.compare(this.path, otherTab.path);
+            if (pathCompare == 0) {
+                // Paths were the same. Preserve existing order.
+                if (this.index < otherTab.index) {
+                    return -1;
+                } else if (this.index == otherTab.index) {
+                    // This should never happen.
+                    return 0;
+                } else {
+                    return 1;
+                }
+            } else {
+                return pathCompare;
+            }
         }
         else if (this.hostParts.length < otherTab.hostParts.length) {
             // This hostname was shorter. This tab gets sorted first.
@@ -143,6 +163,7 @@ class Window {
 
     // Sorts and groups all tabs in the window.
     async sortAndGroupTabs() {
+        console.log("Organizing window", this._id);
         const startTime = new Date();
 
         await this._loadTabs();
@@ -155,16 +176,13 @@ class Window {
         const endTime = new Date();
         const elapsed = endTime - startTime;
 
-        console.log(`[window ${this._id}] Reorganized ${this._tabs.length} tabs in ${elapsed} ms`);
+        console.log("Organizing window", this._id, "- done,",
+                    this._tabs.length, "tabs,", elapsed, "ms");
     }
 
     // Retrieves all tabs in the window.
     async _loadTabs() {
         const tabs = await chrome.tabs.query({
-            url: [
-                "http://*/*",
-                "https://*/*"
-            ],
             windowId: this._id,
             pinned: false
         });
@@ -221,6 +239,12 @@ class Window {
                 this._groupMap[hostPart] = ungroupedTabs;
             }
         }
+        
+        // If the window contains tabs with unknown URLs (e.g. the url is not http or https),
+        // put those tabs in a special group without a name.
+        if (this._hostTreeRoot.childTabs.length > 0) {
+            this._groupMap[""] = this._hostTreeRoot.childTabs;
+        }
     }
 
     // Constructs part of the groupMap by visiting the given node and its
@@ -267,6 +291,7 @@ class Window {
             group.tabs.sort((t1, t2) => t1.compareTo(t2));
             this._groupList.push(group);
         }
+        console.debug("Group list", this._groupList);
     }
 
     async _moveTabs() {
@@ -287,7 +312,9 @@ class Window {
         // Move the tabs. By moving tabs with greatest move-distance first, we
         // may find other tabs don't need to be moved by the time we get to them.
         for (const tab of tabs) {
-            await chrome.tabs.move(tab.id, { index: tab.desiredIndex });
+            if (tab.moveDistance > 0) {
+                await chrome.tabs.move(tab.id, { index: tab.desiredIndex });
+            }
         }
     }
 
@@ -302,8 +329,10 @@ class Window {
                 groupIds[tab.groupId].push(tab.id);
             }
 
-            if (group.tabs.length < options.groupThreshold) {
+            if (group.tabs.length < options.groupThreshold || group.name == "") {
                 // Not enough tabs to form a physical group.
+                // OR this is a special group containing tabs with unknown URLs (which
+                // should always be kept ungrouped).
                 await this._enforceTabUngroup(group, groupIds);
             }
             else {
@@ -319,6 +348,7 @@ class Window {
     // currentGroupIds: mapping of existing group id => [tab id] for all tabs
     //                  in this logical group.
     async _enforceTabUngroup(group, currentGroupIds) {
+        console.debug("Enforce ungroup", group.name);
         let tabsInAnyGroup = [];
         for (const [groupIdStr, tabIds] of Object.entries(currentGroupIds)) {
             // XXX: keys are always strings. Need to treat as int.
@@ -330,7 +360,7 @@ class Window {
         }
         if (tabsInAnyGroup.length > 0) {
             // Ungroup any tabs that currently belong to a tab group.
-            console.log(`[window ${this._id}] Ungroup: ${group.name}`);
+            console.log("Ungroup", group.name);
             await chrome.tabs.ungroup(tabsInAnyGroup);
         }
     }
@@ -342,6 +372,8 @@ class Window {
     // currentGroupIds: mapping of existing group id => [tab id] for all tabs
     //                  in this logical group.
     async _enforceTabGroup(group, currentGroupIds) {
+        console.debug("Enforce group", group.name);
+        
         // Check the current group ids to see if the desired group already
         // exists among them.
         let targetGroupId = null;
@@ -391,7 +423,7 @@ class Window {
         let updateProperties = {};
 
         if (requireCreate) {
-            console.log(`[window ${this._id}] Add group: ${group.name}`);
+            console.log("Create group", group.name);
             // Target group was not found, make a new group.
             targetGroupId = await chrome.tabs.group({
                 createProperties: { windowId: this._id },
@@ -401,7 +433,7 @@ class Window {
             requireColor = true;
         }
         else if (requireMove) {
-            console.log(`[window ${this._id}] Edit group: ${group.name}`);
+            console.log("Modify group", group.name);
             // Target group already exists. Move tabs to that group.
             await chrome.tabs.group({ tabIds, groupId: targetGroupId });
         }
@@ -445,7 +477,7 @@ class Window {
 
     // Register callback when a tab gets updated.
     chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-        if ('url' in changeInfo) {
+        if (changeInfo.status == "complete") {
             const window = new Window(tab.windowId);
             await window.sortAndGroupTabs();
         }
@@ -461,7 +493,7 @@ class Window {
 
     // Register callback when a tab gets created.
     chrome.tabs.onCreated.addListener(async (tab) => {
-        if (tab.status == "complete" && "url" in tab && tab.url != '') {
+        if (tab.status == "complete") {
             const window = new Window(tab.windowId);
             await window.sortAndGroupTabs();
         }
