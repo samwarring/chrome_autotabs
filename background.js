@@ -448,6 +448,37 @@ class Window {
     }
 }
 
+// The URLCache maps each tab ID to its URL. When a tab is updated, we check
+// the URLCache to determine if the URL has changed significantly. If not,
+// then we will avoid re-sorting the window.
+const urlCache = {
+    _urls: new Map(),
+
+    isTabUrlChanged: function(tab) {
+        let newUrl = null;
+        try {
+            newUrl = new URL(tab.url);
+        } catch (error) {
+            // The URL cannot be parsed (could be a local PDF file). Clear
+            // the tab from the cache and always consider the URL changed.
+            this._urls.delete(tab.id);
+            return true;
+        }
+        if (this._urls.has(tab.id)) {
+            const oldUrl = this._urls.get(tab.id);
+            if (oldUrl.host == newUrl.host && oldUrl.pathname == newUrl.pathname) {
+                return false;
+            }
+        }
+        this._urls.set(tab.id, newUrl);
+        return true;
+    },
+
+    removeTab: function(tabId) {
+        this._urls.delete(tabId);
+    },
+};
+
 // Wrap the service worker logic with an immediately-invoked function expression
 // (IIFE). This allows await-ing the results of APIs at the "top-level".
 (async () => {
@@ -477,15 +508,20 @@ class Window {
 
     // Register callback when a tab gets updated.
     chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-        if (changeInfo.status == "complete") {
+        if (("url" in changeInfo || changeInfo.status == "complete") &&
+            urlCache.isTabUrlChanged(tab)) {
+
             const window = new Window(tab.windowId);
             await window.sortAndGroupTabs();
+        } else {
+            console.debug("Ignoring tab update:", changeInfo, tab);
         }
     });
 
     // Register callback when a tab gets closed.
     chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
         if (!removeInfo.isWindowClosing) {
+            urlCache.removeTab(tabId);
             const window = new Window(removeInfo.windowId);
             await window.sortAndGroupTabs();
         }
