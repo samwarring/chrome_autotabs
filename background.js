@@ -13,6 +13,8 @@ const options = {
         ["stackoverflow", "orange"],
         ["duckduckgo", "red"],
     ],
+    autoCollapseEnabled: true,
+    autoCollapseLimit: 3,
 
     getGroupColor: function(groupName) {
         let color = null;

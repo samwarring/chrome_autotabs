@@ -10,6 +10,8 @@ let options = {
         ["stackoverflow", "orange"],
         ["duckduckgo", "red"],
     ],
+    autoCollapseEnabled: true,
+    autoCollapseLimit: 3,
 };
 
 // Used for string comparisons.
@@ -105,6 +107,25 @@ const controller = {
         }
     },
 
+    enableAutoCollapse: async function(isEnabled) {
+        options.autoCollapseEnabled = isEnabled;
+        this.storeOptions();
+    },
+
+    decreaseAutoCollapseLimit: async function() {
+        if (options.autoCollapseLimit > 1) {
+            options.autoCollapseLimit--;
+            this.storeOptions();
+        }
+    },
+
+    increaseAutoCollapseLimit: async function() {
+        if (options.autoCollapseLimit < 99) {
+            options.autoCollapseLimit++;
+            this.storeOptions();
+        }
+    },
+
     loadOptions: async function() {
         //await chrome.storage.sync.clear();
         const data = await chrome.storage.sync.get("options");
@@ -133,6 +154,10 @@ const ui = {
     newGroupColorName: document.getElementById("newGroupColorName"),
     groupColorList: document.getElementById("groupColorList"),
     groupColorTemplate: document.getElementById("groupColorTemplate"),
+    autoCollapseEnabled: document.getElementById("autoCollapseEnabled"),
+    autoCollapseLimit: document.getElementById("autoCollapseLimit"),
+    decreaseAutoCollapseLimit: document.getElementById("decreaseAutoCollapseLimit"),
+    increaseAutoCollapseLimit: document.getElementById("increaseAutoCollapseLimit"),
 
     INVALID_ALT_DOMAIN_PATTERN: "Alternate domain pattern is not a valid regular expression.",
     INVALID_ALT_DOMAIN_DOMAIN: "Alternate domain replacement is not a valid domain name.",
@@ -142,6 +167,8 @@ const ui = {
         this.updateAltDomains();
         this.updateGroupColorSelect();
         this.updateGroupColors();
+        this.autoCollapseEnabled.checked = options.autoCollapseEnabled;
+        this.autoCollapseLimit.textContent = String(options.autoCollapseLimit);
     },
 
     updateAltDomains: function() {
@@ -227,6 +254,17 @@ const ui = {
             const color = this.newGroupColorColor.value;
             await controller.addGroupColor(groupName, color);
             this.updateGroupColors();
+        });
+        this.autoCollapseEnabled.addEventListener("change", async (event) => {
+            await controller.enableAutoCollapse(event.target.checked);
+        });
+        this.decreaseAutoCollapseLimit.addEventListener("click", async () => {
+            await controller.decreaseAutoCollapseLimit();
+            this.autoCollapseLimit.textContent = String(options.autoCollapseLimit);
+        });
+        this.increaseAutoCollapseLimit.addEventListener("click", async () => {
+            await controller.increaseAutoCollapseLimit();
+            this.autoCollapseLimit.textContent = String(options.autoCollapseLimit);
         });
     }
 };
