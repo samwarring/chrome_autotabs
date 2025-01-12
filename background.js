@@ -161,6 +161,7 @@ class Window {
         this._hostTreeRoot = this._makeHostTreeNode();
         this._groupMap = {};
         this._groupList = [];
+        this._activeTabGroups = [];
     }
 
     // Sorts and groups all tabs in the window.
@@ -182,12 +183,22 @@ class Window {
                     this._tabs.length, "tabs,", elapsed, "ms");
     }
 
+    // Auto-collapses least recently used tab groups.
+    async setCurrentTabGroup(tabGroupId) {
+        this._touchTabGroup(tabGroupId);
+        await this._collapseInactiveTabGroups();
+    }
+
+    // ------------------------------------------------------------------------
+    // Private methods
+
     // Retrieves all tabs in the window.
     async _loadTabs() {
         const tabs = await chrome.tabs.query({
             windowId: this._id,
             pinned: false
         });
+        this._tabs = [];
         for (const tab of tabs) {
             this._tabs.push(new Tab(tab));
         }
@@ -448,7 +459,79 @@ class Window {
             await chrome.tabGroups.update(targetGroupId, updateProperties);
         }
     }
+
+    // Move tabGroupId to the front of the list of active tab groups, and remove
+    // inactive tab group ids from the list.
+    _touchTabGroup(tabGroupId) {
+        if (tabGroupId == chrome.tabGroups.TAB_GROUP_ID_NONE) {
+            // Active tab is not in a group.
+            return;
+        }
+        const currentPos = this._activeTabGroups.indexOf(tabGroupId);
+        if (currentPos == 0) {
+            // Tab group already active.
+            return;
+        }
+        else if (currentPos != -1) {
+            // Recent tab group is re-visited. Move to front.
+            this._activeTabGroups.splice(currentPos, 1);
+            this._activeTabGroups.unshift(tabGroupId);
+        }
+        else {
+            // Visiting an inactive tab group. Evict the least-recently
+            // used tab group (if necessary).
+            this._activeTabGroups.unshift(tabGroupId);
+            if (this._activeTabGroups.length > options.autoCollapseLimit) {
+                this._activeTabGroups.pop();
+            }
+        }
+    }
+
+    // Collapse inactive tab groups according to the current settings.
+    async _collapseInactiveTabGroups() {
+        if (!options.autoCollapseEnabled) {
+            return;
+        }
+        
+        // Get all non-collapsed (i.e. expanded) tab groups.
+        let tabGroups = null;
+        try {
+            tabGroups = await chrome.tabGroups.query({windowId: this._id, collapsed: false});
+        } catch (error) {
+            console.error(error);
+            return;
+        }
+        
+        await tabGroups.forEach(async (tabGroup) => {
+            if (this._activeTabGroups.indexOf(tabGroup.id) == -1) {
+                // Tab group not found in active tab groups. This tab group needs to
+                // be collapsed.
+                try {
+                    console.log("Window", this._id, "collapsing group:", tabGroup.title);
+                    await chrome.tabGroups.update(tabGroup.id, {collapsed: true});
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+        });
+    }
 }
+
+// Manages the collection of all opened windows.
+const windows = {
+    _map: new Map(),
+
+    getWindow: function(windowId) {
+        if (!this._map.has(windowId)) {
+            this._map.set(windowId, new Window(windowId));
+        }
+        return this._map.get(windowId);
+    },
+
+    removeWindow: function(windowId) {
+        this._map.delete(windowId);
+    },
+};
 
 // The URLCache maps each tab ID to its URL. When a tab is updated, we check
 // the URLCache to determine if the URL has changed significantly. If not,
@@ -502,8 +585,7 @@ const urlCache = {
                 windowTypes: ['normal']
             });
             for (const chromeWindow of chromeWindows) {
-                const window = new Window(chromeWindow.id);
-                await window.sortAndGroupTabs();
+                await windows.getWindow(chromeWindow.id).sortAndGroupTabs();
             }
         };
     });
@@ -513,8 +595,7 @@ const urlCache = {
         if (("url" in changeInfo || changeInfo.status == "complete") &&
             urlCache.isTabUrlChanged(tab)) {
 
-            const window = new Window(tab.windowId);
-            await window.sortAndGroupTabs();
+            await windows.getWindow(tab.windowId).sortAndGroupTabs();
         } else {
             console.debug("Ignoring tab update:", changeInfo, tab);
         }
@@ -524,16 +605,28 @@ const urlCache = {
     chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
         if (!removeInfo.isWindowClosing) {
             urlCache.removeTab(tabId);
-            const window = new Window(removeInfo.windowId);
-            await window.sortAndGroupTabs();
+            await windows.getWindow(removeInfo.windowId).sortAndGroupTabs();
         }
     });
 
     // Register callback when a tab gets created.
     chrome.tabs.onCreated.addListener(async (tab) => {
         if (tab.status == "complete") {
-            const window = new Window(tab.windowId);
-            await window.sortAndGroupTabs();
+            await windows.getWindow(tab.windowId).sortAndGroupTabs();
         }
     });
+
+    // Register callback when a tab is selected.
+    chrome.tabs.onActivated.addListener(async (activeInfo) => {
+        // Get the tab's group
+        const tab = await chrome.tabs.get(activeInfo.tabId);
+        
+        // Unfortunately, we cannot collapse the tab groups right away, or we may
+        // get an error saying "Tabs cannot be edited right now (user may be dragging
+        // a tab)". The workaround is to delay the auto-collapsing by a short period.
+        setTimeout(async () => {
+            await windows.getWindow(tab.windowId).setCurrentTabGroup(tab.groupId);
+        }, 100 /* ms */);
+    });
+
 })();

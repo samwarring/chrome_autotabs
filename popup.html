@@ -102,6 +102,20 @@
     </div>
     <div class="option">
         <h2>Auto-Collapse Tab Groups</h2>
+        <div class="optionValue">
+            <span class="checkboxContainer">
+                <input type="checkbox" id="autoCollapseEnabled" />
+                <label for="autoCollapseEnabled"></label>
+                <span class="optionDescription">
+                    <p class="optionDescriptionBrief">
+                        Enable
+                        <input id="decreaseAutoCollapseLimit" type="button" class="spinButton minusButton" value="-" />
+                        <span id="autoCollapseLimit" class="spinValue">0</span>
+                        <input id="increaseAutoCollapseLimit" type="button" class="spinButton plusButton" value="+" />
+                    </p>
+                </span>
+            </span>
+        </div>
         <div class="optionDescription">
             <p class="optionDescriptionBrief">
                 Automatically collapse inactive tab groups.
@@ -110,22 +124,6 @@
                 You can select how many recent tab groups remain expanded. Older tab groups
                 are automatically collapsed.
             </p>
-        </div>
-        <div class="optionValue">
-            <span class="checkboxContainer">
-                <input type="checkbox" id="autoCollapseEnabled" />
-                <label for="autoCollapseEnabled"></label>
-                <span class="optionDescription">
-                    <p class="optionDescriptionBrief">
-                        Enable
-                    </p>
-                </span>
-            </span>
-        </div>
-        <div class="optionValue">
-            <input id="decreaseAutoCollapseLimit" type="button" class="spinButton minusButton" value="-" />
-            <span id="autoCollapseLimit" class="spinValue">0</span>
-            <input id="increaseAutoCollapseLimit" type="button" class="spinButton plusButton" value="+" />
         </div>
     </div>
     <div class="option">
